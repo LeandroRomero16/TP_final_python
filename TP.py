@@ -1,5 +1,19 @@
 
-productos = []
+import sqlite3
+
+conexion = sqlite3.connect("productos.db")
+cursor = conexion.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS productos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    categoria TEXT NOT NULL,
+    precio INTEGER NOT NULL
+)
+""")
+
+conexion.commit()
 
 
     
@@ -21,37 +35,56 @@ while True:
     
     if opcion == "1":
         
-        nombre = input("Nombre del producto: ").strip().capitalize()
+        while True:
+            nombre = input("Ingrese el nombre del producto o Exit para salir al menú: ").strip().title()
         
-        if nombre == "":
-            print("no se ha agregado ningún producto")
-            continue
-        
-        categoria = input ("Categoria del producto: ").strip().capitalize()
-        
-        if categoria == "":
-            print ("___Debe agregar una categoria del producto___")
-            continue
-        
-        precio =input("Ingrese su precio (sin centavos): ").strip()
-        
-        if not precio.isdigit():
-            print("El precio no debe contener centavos")
-            continue
+            if nombre == "Exit":
+                print("Saliendo del menú de agregado de productos...")
+                break
             
-        precio = int(precio)
+            if nombre == "":
+                print("No se ha agregado ningun producto. Por favor ingrese uno")
+                continue
+           
         
-        producto = [nombre,categoria,precio]
         
-        productos.append(producto)
+            categoria = input ("Categoria del producto: ").strip().title()
         
-        print ("Producto agregado correctamente")
+            if categoria == "":
+                print ("___Debe agregar una categoria del producto___")
+                continue
+        
+            precio =input("Ingrese su precio (sin centavos): ").strip()
+        
+            if not precio.isdigit():
+                print("El precio no debe contener centavos")
+                continue
+            
+            precio = int(precio)
+        
+            cursor.execute(
+                "INSERT INTO productos (nombre, categoria, precio) VALUES (?,?,?)",
+                (nombre, categoria, precio)
+            )
+            conexion.commit()
+        
+            print ("Producto agregado correctamente")
+            
+            continuar = input("\nPresiona enter para seguir agregando productos o Exit para salir al menú: ").strip().capitalize()
+            
+            if continuar == "Exit":
+                print("Saliendo al menú...")
+                break
     
     #==================
     # MOSTRAR PRODUCTOS
     #==================    
     elif opcion == "2":
         
+        cursor.execute("SELECT id, nombre, categoria, precio FROM productos")
+        
+        productos = cursor.fetchall()
+               
         if len(productos) == 0:
             print("no se han encontrado productos")
             
@@ -59,14 +92,12 @@ while True:
             
             print("\n===== LISTA DE PRODUCTOS =====")
             
-            for i, producto in enumerate(productos):
-                
-                print(f"{i+1}. Nombre: {producto[0]} ")
-                
-                print(f"   Categoria: {producto[1]}")
-                
-                print(f"   Precio: ${producto[2]}")
-                
+            for numero, producto in enumerate(productos, start=1):
+
+                print(f"{numero}. Nombre: {producto[1]}")
+                print(f"   ID real: {producto[0]}")
+                print(f"   Categoría: {producto[2]}")
+                print(f"   Precio: ${producto[3]}")
                 print("--------------------------")            
     
     
@@ -75,72 +106,106 @@ while True:
     #==================
     elif opcion == "3":
         
-        if len(productos) == 0:
-            print("no hay productos para mostrar")
-            continue
+        while True:
+            cursor.execute("SELECT COUNT(*) FROM productos")
+            cantidad_productos = cursor.fetchone()[0]
+
+            if cantidad_productos == 0:
+                print("No hay productos agregados")
+                break
         
-        buscar = input("Ingresá el nombre del producto: ").strip().capitalize()
+            buscar = input(
+                "Ingresá el nombre del producto o escriba Exit para salir al menú: ").strip().title()
         
-        if buscar == "":
-            print ("Debe ingresar un producto")
-            continue
-        
-        encontrado = False
-        
-        for producto in productos:
+            if buscar == "Exit":
+                print ("Saliendo del buscador...")
+                break
             
-            if buscar in producto[0]:
+            
+            if buscar == "":
+                print ("Debe ingresar un producto")
+                continue
+        
+            cursor.execute(
+                """
+                SELECT id, nombre, categoria, precio
+                FROM productos
+                WHERE nombre like ?
+                """,
+                (f"%{buscar}%",)
+            
+            )
+        
+            productos_encontrados = cursor.fetchall()
+        
+            if len (productos_encontrados) == 0:
+                print("no se encontró ningún producto")
+                continue
+        
+            
+            for producto in productos_encontrados:
                 
                 print("\n--- Producto encontrado ---")
 
-                print(f"Nombre: {producto[0]}")
+                print(f"ID: {producto[0]}")
+                    
+                print(f"Nombre: {producto[1]}")
+                    
+                print(f"Categoría: {producto[2]}")
+                    
+                print(f"Precio: ${producto[3]}")    
+            
+            continuar = input("\nPresiona enter para seguir buscando productos o escriba Exit para salir: ").strip().title()
+            
+            if continuar == "Exit":
+                print("Saliendo al menú...")
+                break    
                 
-                print(f"Categoría: {producto[1]}")
-                
-                print(f"Precio: ${producto[2]}")    
-                
-                encontrado = True
-        
-        if encontrado == False:
-            print("No se ha encontrado el producto")
     
     #====================
     # ELIMINAR PRODUCTOS
     #====================        
             
     elif opcion == "4":
-        
-        if len(productos) == 0:
-            print ("No hay productos para eliminar")
-            continue
-        
-        for i, producto in enumerate(productos):
+        while True:
+            cursor.execute("SELECT id, nombre FROM productos")
             
-            print(f"{i+1}. Nombre: {producto[0]}")
+            productos = cursor.fetchall()
             
-        eliminar = input("Ingrese el nombre del producto a eliminar: ").strip().capitalize()
-        
-        encontrado = False
-        
-        for producto in productos:
+            if len(productos) == 0:
+                print("No hay productos para eliminar")
+                continue
             
-            if eliminar == producto [0]:
+            print("\n==== PRODUCTOS ====")
+            
+            for producto in productos:
+                print(f"ID: {producto[0]} - Nombre: {producto[1]}")
                 
-                productos.remove(producto)
-                
-                print(f"Producto '{eliminar}' eliminado correctamente")
-                
-                encontrado = True
-                
-                break
+            eliminar = input("Ingrese el ID del producto que desea eliminar: ").strip()
             
-        if not encontrado:
-            print("Producto no encontrado")
+            if not eliminar.isdigit():
+                print("Debe ingresar un ID válido")
+                continue
+            eliminar=int(eliminar)
             
+            cursor.execute(
+                "DELETE FROM productos WHERE id = ?",
+                (eliminar,)
+            )
+            
+            conexion.commit()
+            
+            if cursor.rowcount > 0:
+                print("Producto eliminado correctamente")
+                
+            else:
+                print("No se encontró un producto con ese ID")
+            break
     #===================
     # SALIR DEL PROGRAMA   
     #===================
     elif opcion == "5":
+        conexion.close()
         print("Programa finalizado")
         break
     
