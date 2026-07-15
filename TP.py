@@ -173,8 +173,8 @@ while True:
             productos = cursor.fetchall()
             
             if len(productos) == 0:
-                print("No hay productos para eliminar")
-                continue
+                print("\nNo hay productos para eliminar")
+                break
             
             print("\n==== PRODUCTOS ====")
             
